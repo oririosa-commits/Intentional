@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intentional — Find Your Clarity</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400;1,500&family=Nunito:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ivory:     #FAF7F2;
+  --ivory2:    #F3EDE3;
+  --ivory3:    #EAE0D0;
+  --sage:      #7A9E87;
+  --sage-l:    #A8C4B0;
+  --sage-xl:   #D8EAE0;
+  --sage-xxl:  #EEF6F1;
+  --terra:     #C4845A;
+  --terra-l:   #E8C4A8;
+  --terra-xl:  #FAF0E8;
+  --sky:       #6B9CB8;
+  --sky-l:     #A8C8DC;
+  --sky-xl:    #E8F2F8;
+  --rose:      #B87A8A;
+  --rose-l:    #DDB8C4;
+  --rose-xl:   #F8EEF2;
+  --plum:      #7A6E8A;
+  --plum-l:    #B8B0C8;
+  --plum-xl:   #F0EEF6;
+  --ink:       #2C2C2C;
+  --ink2:      #4A4A4A;
+  --ink3:      #6A6A6A;
+  --ink4:      #9A9A9A;
+  --border:    rgba(44,44,44,0.1);
+  --border2:   rgba(44,44,44,0.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--ivory);color:var(--ink);font-family:'Nunito',sans-serif;font-size:16px;line-height:1.7}
+button{cursor:pointer;font-family:'Nunito',sans-serif;transition:all 0.22s ease;border:none}
+textarea,input{font-family:'Nunito',sans-serif;font-size:15px}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--ivory2)}
+::-webkit-scrollbar-thumb{background:var(--sage-l);border-radius:2px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes breathe{0%,100%{opacity:0.5;transform:scale(1)}50%{opacity:0.8;transform:scale(1.04)}}
+@keyframes blink{0%,100%{opacity:0.25}50%{opacity:0.9}}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes prizeIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
+.fu{animation:fadeUp 0.6s ease both}
+.fu2{animation:fadeUp 0.6s ease 0.15s both}
+.fu3{animation:fadeUp 0.6s ease 0.3s both}
+.fu4{animation:fadeUp 0.6s ease 0.45s both}
+.fi{animation:fadeIn 0.5s ease both}
+.breathe{animation:breathe 4s ease infinite}
+.msg-in{animation:msgIn 0.35s ease both}
+.prize-in{animation:prizeIn 0.4s ease both}
+
+/* Base cards */
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px 22px}
+.card-soft{background:var(--ivory2);border:1px solid var(--border2);border-radius:14px;padding:16px 18px}
+
+/* Buttons */
+.btn-primary{background:var(--sage);color:#fff;border-radius:12px;padding:13px 28px;font-size:15px;font-weight:600;letter-spacing:0.02em}
+.btn-primary:hover{background:var(--sage-l);transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1px solid var(--border);border-radius:10px;padding:11px 22px;font-size:14px;color:var(--ink3)}
+.btn-ghost:hover{background:var(--ivory2);border-color:var(--sage-l)}
+
+/* Chat bubbles */
+.bubble-you{background:var(--sage-xxl);border:1px solid var(--sage-l);border-radius:18px 4px 18px 18px;padding:11px 16px;color:var(--ink2)}
+.bubble-ai{background:#fff;border:1px solid var(--border);border-radius:4px 18px 18px 18px;padding:11px 16px;color:var(--ink2)}
+
+/* Lane tabs */
+.lane-tab{padding:10px 6px;border:none;border-bottom:2px solid transparent;background:transparent;font-size:13px;cursor:pointer;color:var(--ink4);font-weight:500;transition:all 0.2s}
+.lane-tab.active{color:var(--sage);border-bottom-color:var(--sage)}
+.lane-tab:disabled{opacity:0.35;cursor:not-allowed}
+
+/* Progress dots */
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ivory3);transition:all 0.4s ease}
+.dot.active{background:var(--sage);transform:scale(1.2)}
+.dot.done{background:var(--sage-l)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ── API CONFIG ────────────────────────────────────────────────────────────────
+// Replace with your key or proxy endpoint
+// API calls routed through /api/chat (key stored in Vercel env vars)
+const MODEL   = 'claude-sonnet-4-20250514';
+
+// ── LANE DEFINITIONS ──────────────────────────────────────────────────────────
+const LANES = [
+  { id:'origin', label:'Your story',     icon:'○', color:'var(--terra)',  bg:'var(--terra-xl)',  border:'var(--terra-l)',  step:1 },
+  { id:'you',    label:'Your side',      icon:'◎', color:'var(--sage)',   bg:'var(--sage-xxl)',  border:'var(--sage-l)',   step:2 },
+  { id:'them',   label:'Their view',     icon:'◇', color:'var(--sky)',    bg:'var(--sky-xl)',    border:'var(--sky-l)',    step:3 },
+  { id:'container', label:'The structure', icon:'△', color:'var(--plum)', bg:'var(--plum-xl)', border:'var(--plum-l)',   step:4 },
+  { id:'clarity', label:'Clarity point', icon:'✦', color:'var(--rose)',  bg:'var(--rose-xl)',  border:'var(--rose-l)',   step:5 },
+];
+
+const ENTRY_MODES = [
+  { id:'full',       icon:'○', label:'Full session',    desc:'Origin story → your side → their view → the structure → clarity. ~30 min. The complete picture.' },
+  { id:'crisis',     icon:'△', label:'Crisis mode',     desc:'Something is happening right now. Skip the backstory. Get immediate clarity and a path forward. ~10 min.' },
+  { id:'reflection', icon:'◇', label:'Personal reflection', desc:'No conflict right now. Just you and your patterns. ~15 min.' },
+];
+
+const ORIGIN_QUESTIONS = [
+  { id:'o1', q:"Before we talk about what's happening — tell me a little about where you come from. Not your résumé. The real version.", placeholder:"Where I'm from, what shaped me..." },
+  { id:'o2', q:"What's the hardest thing you've had to survive that most people in your life don't fully know about?", placeholder:"Something I carried mostly alone..." },
+  { id:'o3', q:"When things get overwhelming, what do you usually do? Talk, go quiet, leave, work harder, shut down?", placeholder:"My pattern when I'm overwhelmed..." },
+  { id:'o4', q:"What pressure are you carrying right now that has nothing to do with this relationship — but is probably affecting it?", placeholder:"External pressure I'm holding..." },
+  { id:'o5', q:"What grounds you — what gives you a sense of purpose when everything else feels unstable?", placeholder:"What holds me when nothing else does..." },
+];
+
+const CALAMITY = [
+  { icon:'✦', color:'var(--sage)', bg:'var(--sage-xxl)', border:'var(--sage-l)', label:'Best case',
+    desc:'Both people reach clarity. The most frictionless form of human connection becomes visible — whatever shape that takes. The decision is made awake, not from fear.' },
+  { icon:'◎', color:'var(--terra)', bg:'var(--terra-xl)', border:'var(--terra-l)', label:'Most likely without clarity',
+    desc:'The situation stays unresolved. A permanent decision gets made from the worst moment. What was real between them gets buried under what wasn\'t navigated.' },
+  { icon:'△', color:'var(--rose)', bg:'var(--rose-xl)', border:'var(--rose-l)', label:'What the structure does left unexamined',
+    desc:'The container keeps producing the same friction. Both people keep working harder inside something that was never designed for who they actually are.' },
+];
+
+const PRIZES = [
+  { id:'p1', label:'Knowing what you actually need — not what the pressure says you need',    threshold:15 },
+  { id:'p2', label:'A fair, honest read of the other person beneath what they said',           threshold:28 },
+  { id:'p3', label:'Understanding the structure you\'re inside and what it\'s costing you',    threshold:42 },
+  { id:'p4', label:'The ability to act from clarity instead of confusion or fear',             threshold:58 },
+  { id:'p5', label:'The most frictionless path to the best human connection still available',  threshold:75 },
+];
+
+const PRESSURE_RELEASE = [
+  { label:'48-hour pause', desc:'No irreversible actions for 48 hours. No permanent departures, no legal moves. Just time to think with better tools.' },
+  { label:'7-day structured space', desc:'Physical separation for 7 days — not a breakup, a pause. One scheduled check-in. The situation stays open.' },
+  { label:'Parallel solo sessions', desc:'Each person completes their own clarity session privately. Then share only the profiles, not the raw conversation.' },
+  { label:'30-day conscious agreement', desc:'A 30-day commitment to use the tools before any permanent decision. At 22 and 23, 30 days is nothing. Regret is everything.' },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let S = {
+  screen:       'landing',
+  mode:         null,
+  yourName:     '',
+  theirName:    '',
+  situation:    '',
+  urgency:      false,
+  lane:         'origin',
+  msgs:         { origin:[], you:[], them:[], container:[], clarity:[] },
+  originStep:   0,
+  originDone:   false,
+  score:        0,
+  prizes:       [],
+  calamityOpen: false,
+  pressureOpen: false,
+  loading:      false,
+  report:       null,
+  laneUnlocked: { origin:true, you:false, them:false, container:false, clarity:false },
+};
+
+function set(patch) {
+  const next = typeof patch === 'function' ? patch(S) : patch;
+  Object.assign(S, next);
+  render();
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+async function ai(messages, system, max=400) {
+  try {
+    const r = await fetch('/api/chat', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'x-api-key':API_KEY, 'anthropic-version':'2023-06-01' },
+      body: JSON.stringify({ model:MODEL, max_tokens:max, system, messages })
+    });
+    const d = await r.json();
+    return d.content?.find(b => b.type==='text')?.text || '';
+  } catch(e) { return ''; }
+}
+
+// ── SYSTEM PROMPTS ────────────────────────────────────────────────────────────
+function sysOrigin() {
+  return `You are a warm, perceptive clarity coach inside "Intentional." You are doing a personal history intake with ${S.yourName} — not to analyze them, but to help them see the external pressures and personal patterns that are influencing how they show up in their current conflict.
+
+Be warm, unhurried, and genuinely curious. This is not therapy. This is a mirror. Ask one follow-up question based on what they shared. Help them make the connection between their personal history and their current relational patterns without spelling it out — let them arrive at it.
+
+If they mention: orphan experience, immigration, illness, cultural displacement, family dynamics, financial stress, identity uncertainty — these are gold. Reflect them gently back. 2-3 sentences max.`;
+}
+
+function sysYou() {
+  const origin = getConvo('origin');
+  return `You are a warm, non-judgmental clarity coach inside "Intentional."
+
+${S.yourName}'s personal background: ${origin || 'Not yet shared.'}
+Situation: ${S.situation}
+Other person: ${S.theirName || 'their partner'}
+
+You already know their patterns from the origin session. Use that context. Help them distinguish what they THINK they feel from what they ACTUALLY feel. Surface protection mechanisms. Ask one perceptive question at a time. Never moralize. 2-3 sentences max.`;
+}
+
+function sysThem() {
+  return `You are helping ${S.yourName} understand what ${S.theirName || 'the other person'} is likely experiencing.
+
+${S.yourName}'s background: ${getConvo('origin')}
+Their session: ${getConvo('you')}
+Situation: ${S.situation}
+
+Construct a fair, compassionate read of what ${S.theirName || 'the other person'} is likely feeling, needing, protecting. Do NOT speak for them — give ${S.yourName} a perspective lens. Be honest where ${S.yourName}'s read might be incomplete. Ask one question at a time. 2-3 sentences.`;
+}
+
+function sysContainer() {
+  return `You are helping ${S.yourName} examine the structure they are operating inside — the relationship contract, the cultural framework, the legal entanglement, the social expectations.
+
+Background: ${getConvo('origin')}
+Their session: ${getConvo('you')}
+Perspective on other: ${getConvo('them')}
+Situation: ${S.situation}
+
+The Container lane asks: what is the institution demanding of you that you didn't consciously choose? Where does the structure help and where is it actively working against what you feel? Surface the inherited vs chosen distinction. Surface cultural framework collisions if present. Ask one question at a time. 2-3 sentences. Never tell them to leave or stay.`;
+}
+
+function sysClarity() {
+  return `You are guiding ${S.yourName} to the Clarity Point — the place where, after all pressures and containers have been examined, they can honestly determine the most frictionless path to the best human connection still available.
+
+Full context:
+- Personal patterns: ${getConvo('origin')}
+- Their side: ${getConvo('you')}
+- Other person's likely experience: ${getConvo('them')}
+- Container examination: ${getConvo('container')}
+- Situation: ${S.situation}
+
+The Clarity Point is not a verdict. It presents: what is honestly still available between these two people? What form can their connection take? What does each path require and protect? Help ${S.yourName} arrive at grace — the natural result of full understanding. This is where the app delivers its promise. Ask one grounding question to begin. 2-3 sentences.`;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function getConvo(lane) {
+  return S.msgs[lane].map(m => `${m.r==='u' ? S.yourName : 'Coach'}: ${m.c}`).join('\n');
+}
+function userMsgCount(lane) { return S.msgs[lane].filter(m => m.r==='u').length; }
+function totalMsgs() {
+  return ['origin','you','them','container','clarity'].reduce((t,l) => t + userMsgCount(l), 0);
+}
+function updateScore() {
+  const t = totalMsgs();
+  const score = Math.min(100, t * 6);
+  const prizes = PRIZES.filter(p => score >= p.threshold);
+  set({ score, prizes });
+}
+function scrollBottom(id='chat-bottom') {
+  setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior:'smooth' }), 80);
+}
+
+// ── SESSION INIT ──────────────────────────────────────────────────────────────
+function initSession() {
+  const msgs = { origin:[], you:[], them:[], container:[], clarity:[] };
+
+  if (S.mode === 'crisis') {
+    const opener = `${S.yourName}, I can hear this is urgent. Let's not waste time. Tell me what's happening right now — not the whole story, just what's in front of you this moment.`;
+    msgs.you = [{ r:'a', c:opener }];
+    set({ msgs, lane:'you', laneUnlocked:{ ...S.laneUnlocked, you:true }, originDone:true });
+  } else if (S.mode === 'reflection') {
+    const opener = `${S.yourName}, this is your space. No conflict to resolve right now — just you and your own patterns. Let's start with something simple: when you're at your most honest with yourself, what do you think is the recurring pattern in how you connect with people?`;
+    msgs.you = [{ r:'a', c:opener }];
+    set({ msgs, lane:'you', laneUnlocked:{ ...S.laneUnlocked, you:true }, originDone:true });
+  } else {
+    // Full session — start with origin
+    const q = ORIGIN_QUESTIONS[0];
+    msgs.origin = [{ r:'a', c:q.q }];
+    set({ msgs, lane:'origin', laneUnlocked:{ ...S.laneUnlocked, origin:true } });
+  }
+}
+
+// ── SEND MESSAGES ─────────────────────────────────────────────────────────────
+async function sendMsg(text) {
+  if (!text.trim() || S.loading) return;
+  const lane = S.lane;
+  const updated = [...S.msgs[lane], { r:'u', c:text }];
+  set({ msgs:{ ...S.msgs, [lane]:updated }, loading:true });
+
+  const sysMap = { origin:sysOrigin, you:sysYou, them:sysThem, container:sysContainer, clarity:sysClarity };
+  let reply = await ai(
+    updated.map(m => ({ role: m.r==='u' ? 'user' : 'assistant', content: m.c })),
+    sysMap[lane]()
+  );
+
+  // Check if origin session should advance
+  if (lane === 'origin') {
+    const uCount = userMsgCount('origin') + 1;
+    const nextStep = Math.min(uCount, ORIGIN_QUESTIONS.length - 1);
+    const originDone = uCount >= ORIGIN_QUESTIONS.length;
+
+    if (!originDone && nextStep > S.originStep) {
+      // After AI reply, append next structured question
+      const nextQ = ORIGIN_QUESTIONS[nextStep];
+      reply = reply ? reply + '\n\n' + nextQ.q : nextQ.q;
+      set(s => ({
+        msgs:{ ...s.msgs, [lane]: reply ? [...updated, { r:'a', c:reply }] : updated },
+        loading:false,
+        originStep: nextStep,
+      }));
+    } else if (originDone) {
+      const transition = reply + '\n\nThank you for sharing that. It takes something to look at yourself that honestly. Whenever you\'re ready, move to "Your side" — that\'s where we talk about what\'s happening between you and ' + (S.theirName || 'the other person') + '.';
+      set(s => ({
+        msgs:{ ...s.msgs, [lane]: [...updated, { r:'a', c:transition }] },
+        loading:false,
+        originDone:true,
+        laneUnlocked:{ ...s.laneUnlocked, you:true },
+      }));
+    } else {
+      set(s => ({
+        msgs:{ ...s.msgs, [lane]: reply ? [...updated, { r:'a', c:reply }] : updated },
+        loading:false,
+      }));
+    }
+  } else {
+    set(s => ({
+      msgs:{ ...s.msgs, [lane]: reply ? [...updated, { r:'a', c:reply }] : updated },
+      loading:false,
+    }));
+
+    // Unlock next lane after sufficient engagement
+    const uCount = userMsgCount(lane) + 1;
+    if (lane === 'you' && uCount >= 3) set(s => ({ laneUnlocked:{ ...s.laneUnlocked, them:true } }));
+    if (lane === 'them' && uCount >= 2) set(s => ({ laneUnlocked:{ ...s.laneUnlocked, container:true } }));
+    if (lane === 'container' && uCount >= 2) set(s => ({ laneUnlocked:{ ...s.laneUnlocked, clarity:true } }));
+  }
+
+  updateScore();
+  scrollBottom();
+}
+
+async function openLane(id) {
+  if (!S.laneUnlocked[id]) return;
+  if (S.msgs[id].length > 0) { set({ lane:id }); return; }
+
+  set({ lane:id, loading:true });
+  const openers = {
+    them: `Based on everything you've shared about ${S.theirName || 'the other person'} — let's look at their side. What do you think they're actually feeling beneath what they've said or done?`,
+    container: `Let's look at the structure you're both operating inside — the relationship contract, the expectations, the cultural framework. What does this container demand of you that you didn't consciously choose?`,
+    clarity: `We've looked at you, at them, and at the structure holding everything. Now let's find the clarity point. Stripped of all the pressure — what do you actually want from this person? What form of connection is honestly still available between you?`,
+  };
+  const sysMap = { them:sysThem, container:sysContainer, clarity:sysClarity };
+  const aiOpener = await ai([{ role:'user', content:`Open the ${id} lane with a warm, grounding observation and one question. 2-3 sentences.` }], sysMap[id]());
+
+  set(s => ({
+    msgs:{ ...s.msgs, [id]: [{ r:'a', c: aiOpener || openers[id] }] },
+    loading:false,
+  }));
+}
+
+async function generateReport() {
+  if (S.loading) return;
+  set({ loading:true });
+
+  const prompt = `Generate a complete clarity report as JSON (no markdown, no backticks):
+
+Personal patterns: ${getConvo('origin')}
+Their side: ${getConvo('you')}
+Other person's perspective: ${getConvo('them')}
+Container examination: ${getConvo('container')}
+Clarity session: ${getConvo('clarity')}
+Situation: ${S.situation}
+
+Return: {
+  "coreNeed": "what they actually need",
+  "coreFear": "their core fear",
+  "survivalPattern": "the pattern running beneath their behavior",
+  "theirCoreNeed": "what the other person likely needs",
+  "theirCoreFear": "the other person's likely core fear",
+  "containerTruth": "what the structure is doing to them both",
+  "inheritedVsChosen": "what they inherited vs what they consciously chose in this relationship",
+  "path1": { "label": "lowest friction", "desc": "...", "requires": "...", "protects": "..." },
+  "path2": { "label": "medium path", "desc": "...", "requires": "...", "protects": "..." },
+  "path3": { "label": "highest intention", "desc": "...", "requires": "...", "protects": "..." },
+  "clarityStatement": "the honest truth of where they are, said with grace",
+  "nextHonestMove": "the single most honest next move",
+  "truth": "the one thing they need to hear that they haven't said out loud",
+  "affirmation": "one sentence they can carry forward"
+}`;
+
+  const raw = await ai([{ role:'user', content:prompt }], 'Return only valid compact JSON.', 1000);
+  let report = {
+    coreNeed:'genuine connection and safety — to be chosen freely, not out of obligation',
+    coreFear:'that nothing in their life has been chosen for them — including this',
+    survivalPattern:'when overwhelmed, detach and move forward — the same pattern that survived childhood loss',
+    theirCoreNeed:'to be believed — that what she feels is real and not contaminated by what she needs',
+    theirCoreFear:'that her love will always be suspected because of a piece of paper that existed before she understood what it meant',
+    containerTruth:'The legal structure converted an act of love into a transaction — not by choice, but by circumstance. Neither person put the poison there. The container did.',
+    inheritedVsChosen:'Most of what this relationship is built on was inherited — cultural expectations, legal entanglement, social timing. Very little was consciously chosen with full information.',
+    path1:{ label:'Conscious friendship', desc:'Release the contract. Keep the person. Let what was real survive in a form that doesn\'t require either of them to perform certainty they don\'t have.', requires:'Honesty about what the marriage has become. Legal separation handled humanely.', protects:'The human connection. The dignity of both people.' },
+    path2:{ label:'Renegotiated partnership', desc:'Name everything that was never named. Build new agreements from scratch. Get outside support. Give the relationship a real chance with real tools.', requires:'Both people willing to be fully honest. Time. Outside guidance.', protects:'The possibility that what they feel can be built into something sustainable.' },
+    path3:{ label:'Fully conscious marriage', desc:'Both people have done the origin work. Both understand the container and have chosen it freely. The cultural gaps are named and bridged. The love is real and the structure has been redesigned to serve it.', requires:'Everything — full honesty, cultural negotiation, health support, family boundary-setting, time.', protects:'Everything — the relationship, the family, the future.' },
+    clarityStatement:'What you have for each other is real. What you\'ve been trying to hold it inside is not built for the shape of your lives. That\'s not a verdict on the love. It\'s an honest look at the container.',
+    nextHonestMove:'Have one conversation where neither of you is trying to win. Just say what\'s actually true.',
+    truth:'You are not fighting each other. You are both fighting the pressure of everything you\'ve never been given the tools to process.',
+    affirmation:'Whatever form this takes next, you were real to each other. That doesn\'t have to end.',
+  };
+  try { report = JSON.parse(raw.replace(/```json|```/g,'').trim()); } catch(e) {}
+  set({ report, loading:false, screen:'results' });
+}
+
+// ── RENDER DISPATCHER ─────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const screens = { landing:rLanding, modeSelect:rModeSelect, setup:rSetup, session:rSession, results:rResults };
+  app.innerHTML = (screens[S.screen] || rLanding)();
+  const binders = { landing:bLanding, modeSelect:bModeSelect, setup:bSetup, session:bSession, results:bResults };
+  (binders[S.screen] || bLanding)();
+}
+
+// ── LANDING ───────────────────────────────────────────────────────────────────
+function rLanding() {
+  return `
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;background:var(--ivory)">
+  <div class="breathe" style="width:72px;height:72px;border-radius:50%;background:var(--sage-xl);border:1px solid var(--sage-l);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;font-size:28px;color:var(--sage)">○</div>
+
+  <div class="fu" style="display:inline-block;background:var(--sage-xxl);border:1px solid var(--sage-l);border-radius:100px;padding:5px 18px;margin-bottom:20px">
+    <span style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--sage);font-weight:600">Intentional</span>
+  </div>
+
+  <h1 class="fu2" style="font-family:'Playfair Display',serif;font-size:clamp(34px,6vw,54px);font-weight:400;line-height:1.15;margin:0 0 10px;color:var(--ink);font-style:italic">
+    You don't have to ghost anyone.
+  </h1>
+  <p class="fu2" style="font-size:clamp(13px,2vw,16px);font-weight:600;color:var(--sage);letter-spacing:0.06em;text-transform:uppercase;margin:0 0 20px">
+    Get clarity on everything.
+  </p>
+  <p class="fu3" style="font-size:16px;line-height:1.85;color:var(--ink3);max-width:460px;margin:0 auto 12px;font-weight:300">
+    A guided clarity process that helps you see your personal pressures, examine the container you're inside, and find the most honest path to the best human connection still available.
+  </p>
+  <p class="fu3" style="font-family:'Lora',serif;font-size:15px;font-style:italic;color:var(--ink4);margin:0 0 36px">
+    "For the ones brave enough to stay in the room."
+  </p>
+
+  <div class="fu4" style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:360px">
+    <button id="start-btn" class="btn-primary" style="width:100%">Begin a Clarity Session →</button>
+    <p style="font-size:12px;color:var(--ink4)">Private · Non-judgmental · For adults navigating complexity</p>
+  </div>
+
+  <div class="fu4" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:500px;margin:40px auto 0">
+    ${[['○','Origin Story','Your personal pressures and patterns'],['◎','Your Side','What you actually feel'],['◇','Their View','A fair read of the other person'],['△','The Structure','What the container is doing'],['✦','Clarity Point','The most frictionless path forward']].slice(0,3).map(([icon,label,desc])=>`
+    <div class="card-soft" style="text-align:center;padding:14px 12px">
+      <div style="font-size:20px;color:var(--sage);margin-bottom:6px">${icon}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:3px">${label}</div>
+      <div style="font-size:11px;color:var(--ink4);line-height:1.5">${desc}</div>
+    </div>`).join('')}
+  </div>
+</div>`;
+}
+function bLanding() {
+  document.getElementById('start-btn').onclick = () => set({ screen:'modeSelect' });
+}
+
+// ── MODE SELECT ───────────────────────────────────────────────────────────────
+function rModeSelect() {
+  return `
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;background:var(--ivory)">
+  <div style="max-width:520px;width:100%">
+    <h2 class="fu" style="font-family:'Playfair Display',serif;font-size:28px;font-weight:400;font-style:italic;margin-bottom:8px;color:var(--ink)">How much time do you have?</h2>
+    <p class="fu2" style="font-size:15px;color:var(--ink3);margin-bottom:28px;line-height:1.7">All three paths lead to the same place — clarity. Choose what fits where you are right now.</p>
+    <div class="fu3" style="display:grid;gap:12px;margin-bottom:28px">
+      ${ENTRY_MODES.map(m=>`
+      <button class="mode-btn" data-mode="${m.id}" style="text-align:left;background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;cursor:pointer;transition:all 0.2s">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+          <span style="font-size:18px;color:var(--sage)">${m.icon}</span>
+          <span style="font-size:16px;font-weight:600;color:var(--ink)">${m.label}</span>
+        </div>
+        <p style="font-size:13px;color:var(--ink3);line-height:1.6;margin:0;padding-left:30px">${m.desc}</p>
+      </button>`).join('')}
+    </div>
+    <button id="back-btn" class="btn-ghost" style="width:100%">← Back</button>
+  </div>
+</div>`;
+}
+function bModeSelect() {
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => { btn.style.borderColor='var(--sage-l)'; btn.style.background='var(--sage-xxl)'; });
+    btn.addEventListener('mouseleave', () => { btn.style.borderColor='var(--border)'; btn.style.background='#fff'; });
+    btn.addEventListener('click', () => set({ mode:btn.dataset.mode, screen:'setup' }));
+  });
+  document.getElementById('back-btn').onclick = () => set({ screen:'landing' });
+}
+
+// ── SETUP ─────────────────────────────────────────────────────────────────────
+function rSetup() {
+  const isCrisis = S.mode === 'crisis';
+  const isReflection = S.mode === 'reflection';
+  return `
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;background:var(--ivory)">
+  <div style="max-width:500px;width:100%">
+    <h2 class="fu" style="font-family:'Playfair Display',serif;font-size:28px;font-weight:400;font-style:italic;margin-bottom:6px;color:var(--ink)">
+      ${isCrisis ? "Tell me what's happening." : isReflection ? "Tell me about you." : "Let's set the scene."}
+    </h2>
+    <p class="fu2" style="font-size:14px;color:var(--ink3);margin-bottom:28px;line-height:1.7">You can use real names or aliases. Everything here stays private.</p>
+
+    <div class="fu3" style="display:grid;gap:14px;margin-bottom:20px">
+      <div style="background:var(--sage-xxl);border:1px solid var(--sage-l);border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--sage);font-weight:600;margin-bottom:8px">Your name</div>
+        <input id="inp-you" value="${S.yourName}" placeholder="What should I call you?" style="width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:10px 14px;outline:none">
+      </div>
+      ${!isReflection ? `
+      <div style="background:var(--sky-xl);border:1px solid var(--sky-l);border-radius:12px;padding:14px 16px">
+        <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--sky);font-weight:600;margin-bottom:8px">Their name <span style="opacity:0.6;text-transform:none;font-size:10px">(optional)</span></div>
+        <input id="inp-them" value="${S.theirName}" placeholder="The other person's name or alias..." style="width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;color:var(--ink);padding:10px 14px;outline:none">
+      </div>` : ''}
+    </div>
+
+    <div class="fu3" style="margin-bottom:${isCrisis ? '16px' : '24px'}">
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:8px">
+        ${isCrisis ? 'What\'s happening right now?' : isReflection ? 'What pattern keeps showing up in your relationships?' : 'Describe the situation honestly.'}
+        <span style="color:var(--ink4);font-size:12px"> Nobody else sees this.</span>
+      </div>
+      <textarea id="inp-sit" rows="4" placeholder="${isCrisis ? 'What\'s in front of you right now — the immediate situation...' : isReflection ? 'The pattern I keep noticing...' : 'The connection, the tension, what was said, what wasn\'t, where things stand...'}" style="width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;color:var(--ink2);padding:14px 16px;outline:none;resize:none;line-height:1.7">${S.situation}</textarea>
+    </div>
+
+    ${isCrisis ? `
+    <div class="fu3 card-soft" style="margin-bottom:20px;border-left:3px solid var(--terra);border-radius:0 10px 10px 0;padding-left:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--terra);margin-bottom:4px">Before anything else</div>
+      <p style="font-size:13px;color:var(--ink3);margin:0;line-height:1.65">If any irreversible action is being considered — leaving permanently, legal moves, immigration interference — can you agree to a 48-hour pause? No permanent decisions while we find clarity.</p>
+    </div>` : ''}
+
+    <div class="fu4" style="display:flex;gap:10px">
+      <button id="back-btn" class="btn-ghost" style="flex:1">← Back</button>
+      <button id="open-btn" class="btn-primary" style="flex:2">Open Session →</button>
+    </div>
+  </div>
+</div>`;
+}
+function bSetup() {
+  document.getElementById('back-btn').onclick = () => set({ screen:'modeSelect' });
+  document.getElementById('open-btn').onclick = () => {
+    const yn  = document.getElementById('inp-you')?.value.trim() || '';
+    const tn  = document.getElementById('inp-them')?.value.trim() || '';
+    const sit = document.getElementById('inp-sit')?.value.trim() || '';
+    if (!yn || sit.length < 8) return;
+    set({ yourName:yn, theirName:tn, situation:sit, screen:'session' });
+    initSession();
+  };
+}
+
+// ── SESSION ───────────────────────────────────────────────────────────────────
+function rSession() {
+  const activeLane = LANES.find(l => l.id === S.lane) || LANES[0];
+  const msgs = S.msgs[S.lane];
+  const score = S.score;
+  const canReport = score >= 40 && S.laneUnlocked.clarity;
+  const unlockedPrizes = S.prizes.length;
+  const completedSteps = Object.keys(S.laneUnlocked).filter(k => S.laneUnlocked[k] && S.msgs[k]?.length > 0).length;
+
+  return `
+<div style="display:flex;flex-direction:column;height:100vh;background:var(--ivory);overflow:hidden">
+
+  <!-- Header -->
+  <div style="background:#fff;border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-family:'Playfair Display',serif;font-size:17px;font-style:italic;color:var(--ink)">Intentional</span>
+      <span style="font-size:11px;color:var(--ink4)">· ${S.yourName}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <!-- Clarity score -->
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--ink4)">Clarity</span>
+        <div style="width:56px;height:4px;background:var(--ivory3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${score}%;background:var(--sage);border-radius:2px;transition:width 0.8s ease"></div>
+        </div>
+        <span style="font-size:11px;color:var(--sage);font-weight:600">${score}%</span>
+      </div>
+      ${unlockedPrizes > 0 ? `<div style="background:var(--plum-xl);border:1px solid var(--plum-l);border-radius:100px;padding:2px 10px;font-size:11px;color:var(--plum)">✦ ${unlockedPrizes} unlocked</div>` : ''}
+      <button id="calamity-btn" style="background:${S.calamityOpen ? 'var(--rose-xl)' : 'var(--ivory2)'};border:1px solid ${S.calamityOpen ? 'var(--rose-l)' : 'var(--border)'};border-radius:8px;padding:4px 10px;font-size:11px;color:${S.calamityOpen ? 'var(--rose)' : 'var(--ink3)'}">
+        Outcomes
+      </button>
+      <button id="pressure-btn" style="background:${S.pressureOpen ? 'var(--terra-xl)' : 'var(--ivory2)'};border:1px solid ${S.pressureOpen ? 'var(--terra-l)' : 'var(--border)'};border-radius:8px;padding:4px 10px;font-size:11px;color:${S.pressureOpen ? 'var(--terra)' : 'var(--ink3)'}">
+        Pause options
+      </button>
+      ${canReport ? `<button id="report-btn" style="background:var(--sage);border:none;border-radius:8px;padding:4px 12px;font-size:11px;color:#fff;font-weight:600;${S.loading ? 'opacity:0.6' : ''}">${S.loading ? 'Generating…' : 'Clarity Report →'}</button>` : ''}
+    </div>
+  </div>
+
+  <!-- Calamity panel -->
+  ${S.calamityOpen ? `
+  <div style="background:#fff;border-bottom:1px solid var(--border);padding:14px 16px;flex-shrink:0">
+    <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink4);font-weight:600;margin-bottom:10px">Possible outcomes</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+      ${CALAMITY.map(c=>`
+      <div style="background:${c.bg};border:1px solid ${c.border};border-radius:12px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:600;color:${c.color};margin-bottom:5px">${c.icon} ${c.label}</div>
+        <p style="font-size:12px;color:var(--ink3);line-height:1.65;margin:0">${c.desc}</p>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}
+
+  <!-- Pressure release panel -->
+  ${S.pressureOpen ? `
+  <div style="background:#fff;border-bottom:1px solid var(--border);padding:14px 16px;flex-shrink:0">
+    <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink4);font-weight:600;margin-bottom:10px">Temporary options — before permanent decisions</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:9px">
+      ${PRESSURE_RELEASE.map(p=>`
+      <div style="background:var(--terra-xl);border:1px solid var(--terra-l);border-radius:11px;padding:11px 13px">
+        <div style="font-size:12px;font-weight:600;color:var(--terra);margin-bottom:4px">${p.label}</div>
+        <p style="font-size:12px;color:var(--ink3);line-height:1.6;margin:0">${p.desc}</p>
+      </div>`).join('')}
+    </div>
+  </div>` : ''}
+
+  <!-- Lane navigation -->
+  <div style="background:#fff;border-bottom:1px solid var(--border);display:flex;flex-shrink:0;overflow-x:auto">
+    ${LANES.filter(l => S.mode === 'reflection' ? ['you','clarity'].includes(l.id) : true)
+      .map(l => {
+        const unlocked = S.laneUnlocked[l.id];
+        const active   = S.lane === l.id;
+        const hasConvo = S.msgs[l.id]?.length > 0;
+        return `<button class="lane-tab ${active ? 'active' : ''}" data-lane="${l.id}" ${!unlocked ? 'disabled' : ''} style="flex:1;min-width:80px;${active ? `color:${l.color};border-bottom-color:${l.color}` : ''}">
+          <span style="font-size:11px;display:block">${l.icon}</span>${l.label}
+          ${hasConvo && !active ? `<span style="display:block;font-size:9px;color:var(--sage)">✓</span>` : ''}
+        </button>`;
+      }).join('')}
+  </div>
+
+  <!-- Lane label -->
+  ${S.lane !== 'you' ? `
+  <div style="padding:8px 16px;background:${activeLane.bg};border-bottom:1px solid ${activeLane.border};flex-shrink:0">
+    <span style="font-size:12px;color:${activeLane.color};font-weight:600">${activeLane.label}</span>
+    <span style="font-size:11px;color:var(--ink4);margin-left:8px">${
+      S.lane==='origin'?'Your personal story — before the conflict':
+      S.lane==='them'?'A fair read of the other person':
+      S.lane==='container'?'The structure you\'re both operating inside':
+      S.lane==='clarity'?'Where everything leads — the honest path forward':''
+    }</span>
+  </div>` : ''}
+
+  <!-- Messages -->
+  <div style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:0;min-height:0">
+    ${msgs.length === 0 && S.loading ? '' : msgs.map(m => `
+    <div class="msg-in" style="display:flex;flex-direction:${m.r==='u'?'row-reverse':'row'};gap:8px;margin-bottom:14px;align-items:flex-start">
+      <div style="width:28px;height:28px;border-radius:50%;background:${m.r==='u'?activeLane.bg:'var(--sage-xxl)'};border:1px solid ${m.r==='u'?activeLane.border:'var(--sage-l)'};display:flex;align-items:center;justify-content:center;font-size:10px;color:${m.r==='u'?activeLane.color:'var(--sage)'};flex-shrink:0;margin-top:2px;font-weight:600">
+        ${m.r==='u' ? (S.yourName[0]||'Y').toUpperCase() : '○'}
+      </div>
+      <div class="${m.r==='u'?'bubble-you':'bubble-ai'}" style="max-width:82%;white-space:pre-line">
+        <p style="font-size:14px;line-height:1.8;margin:0">${m.c}</p>
+      </div>
+    </div>`).join('')}
+    ${S.loading ? `
+    <div style="display:flex;gap:8px;align-items:center;padding:6px 0">
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--sage-xxl);border:1px solid var(--sage-l);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--sage)">○</div>
+      <div style="display:flex;gap:4px;padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:4px 16px 16px 16px">
+        ${[0,1,2].map(i=>`<div style="width:5px;height:5px;border-radius:50%;background:var(--sage-l);animation:blink 1.2s ease ${i*0.2}s infinite"></div>`).join('')}
+      </div>
+    </div>` : ''}
+    <div id="chat-bottom"></div>
+  </div>
+
+  <!-- Input -->
+  <div style="padding:12px 14px;border-top:1px solid var(--border);background:#fff;flex-shrink:0">
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <textarea id="chat-input" rows="2" placeholder="${
+        S.lane==='origin' ? 'Share honestly — this is just between you and the session...' :
+        S.lane==='you' ? S.yourName+', speak freely...' :
+        S.lane==='them' ? 'What do you think '+(S.theirName||'they')+' are feeling beneath what they said?' :
+        S.lane==='container' ? 'What does this structure demand of you that you didn\'t consciously choose?' :
+        'What form of connection is honestly still available between you?'
+      }" style="flex:1;background:var(--ivory2);border:1px solid var(--border);border-radius:10px;color:var(--ink);padding:10px 14px;outline:none;resize:none;line-height:1.6"></textarea>
+      <button id="send-btn" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--sage);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">→</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <div style="font-size:11px;color:var(--ink4)">Enter to send · Shift+Enter for new line</div>
+      ${S.prizes.length > 0 ? `<div style="display:flex;gap:6px;overflow-x:auto">${S.prizes.slice(-2).map(p=>`<span class="prize-in" style="background:var(--plum-xl);border:1px solid var(--plum-l);border-radius:100px;padding:2px 10px;font-size:10px;color:var(--plum);white-space:nowrap">✦ ${p.label.split('—')[0].trim()}</span>`).join('')}</div>` : ''}
+    </div>
+  </div>
+</div>`;
+}
+function bSession() {
+  document.getElementById('calamity-btn')?.addEventListener('click', () => set({ calamityOpen:!S.calamityOpen }));
+  document.getElementById('pressure-btn')?.addEventListener('click', () => set({ pressureOpen:!S.pressureOpen }));
+  document.getElementById('report-btn')?.addEventListener('click', () => { if (!S.loading) generateReport(); });
+
+  document.querySelectorAll('.lane-tab:not(:disabled)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.lane;
+      id === 'origin' || id === 'you' ? set({ lane:id }) : openLane(id);
+    });
+  });
+
+  const input = document.getElementById('chat-input');
+  const send  = document.getElementById('send-btn');
+  function doSend() {
+    const v = input?.value?.trim() || '';
+    if (v) { sendMsg(v); if (input) input.value = ''; }
+  }
+  send?.addEventListener('click', doSend);
+  input?.addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
+  scrollBottom();
+}
+
+// ── RESULTS ───────────────────────────────────────────────────────────────────
+function rResults() {
+  const r = S.report || {};
+  return `
+<div style="background:var(--ivory);min-height:100vh">
+  <!-- Hero -->
+  <div style="background:#fff;border-bottom:1px solid var(--border);padding:32px 24px;text-align:center">
+    <div style="font-size:24px;color:var(--sage);margin-bottom:12px">○</div>
+    <h1 style="font-family:'Playfair Display',serif;font-size:clamp(28px,5vw,40px);font-weight:400;font-style:italic;margin-bottom:6px;color:var(--ink)">Your Clarity Report</h1>
+    <p style="font-size:13px;color:var(--ink4)">${S.yourName} · Session Complete</p>
+  </div>
+
+  <div style="max-width:680px;margin:0 auto;padding:28px 20px 80px">
+
+    <!-- Truth statement -->
+    ${r.truth ? `
+    <div style="background:var(--sage-xxl);border:1px solid var(--sage-l);border-radius:16px;padding:24px;margin-bottom:18px;text-align:center">
+      <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--sage);font-weight:600;margin-bottom:12px">What you need to hear</div>
+      <p style="font-family:'Lora',serif;font-size:clamp(16px,3vw,20px);line-height:1.7;font-style:italic;color:var(--ink);margin:0">"${r.truth}"</p>
+    </div>` : ''}
+
+    <!-- Clarity statement -->
+    ${r.clarityStatement ? `
+    <div style="background:var(--plum-xl);border:1px solid var(--plum-l);border-radius:14px;padding:18px 20px;margin-bottom:18px">
+      <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--plum);font-weight:600;margin-bottom:8px">Where you are</div>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.75;margin:0">${r.clarityStatement}</p>
+    </div>` : ''}
+
+    <!-- Next move -->
+    ${r.nextHonestMove ? `
+    <div style="background:var(--sky-xl);border:1px solid var(--sky-l);border-radius:14px;padding:16px 20px;margin-bottom:20px">
+      <div style="font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--sky);font-weight:600;margin-bottom:7px">Your next honest move</div>
+      <p style="font-size:15px;color:var(--ink);line-height:1.7;margin:0;font-weight:500">${r.nextHonestMove}</p>
+    </div>` : ''}
+
+    <!-- Two column: You + Them -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+      <div class="card">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--sage);font-weight:600;margin-bottom:12px">${S.yourName}</div>
+        ${[[`Core need`,r.coreNeed,'var(--ink2)'],[`Core fear`,r.coreFear,'var(--rose)'],[`Pattern`,r.survivalPattern,'var(--terra)']].filter(([,v])=>v).map(([lbl,val,col])=>`
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--ink4);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.08em">${lbl}</div>
+          <div style="font-size:13px;color:${col};line-height:1.6">${val}</div>
+        </div>`).join('')}
+      </div>
+      <div class="card">
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--sky);font-weight:600;margin-bottom:12px">${S.theirName||'Them'}</div>
+        ${[[`Likely need`,r.theirCoreNeed,'var(--ink2)'],[`Likely fear`,r.theirCoreFear,'var(--rose)']].filter(([,v])=>v).map(([lbl,val,col])=>`
+        <div style="margin-bottom:10px">
+          <div style="font-size:10px;color:var(--ink4);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.08em">${lbl}</div>
+          <div style="font-size:13px;color:${col};line-height:1.6">${val}</div>
+        </div>`).join('')}
+        <div style="font-size:11px;color:var(--ink4);font-style:italic;margin-top:6px">A fair read — not what they said, what they likely feel.</div>
+      </div>
+    </div>
+
+    <!-- Container truth -->
+    ${r.containerTruth ? `
+    <div class="card" style="margin-bottom:18px;border-left:3px solid var(--plum)">
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--plum);font-weight:600;margin-bottom:8px">What the structure is doing</div>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.75;margin:0 0 10px">${r.containerTruth}</p>
+      ${r.inheritedVsChosen ? `<p style="font-size:13px;color:var(--ink3);line-height:1.7;margin:0;font-style:italic">${r.inheritedVsChosen}</p>` : ''}
+    </div>` : ''}
+
+    <!-- Paths forward -->
+    <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink4);font-weight:600;margin-bottom:12px">Paths forward</div>
+    <div style="display:grid;gap:12px;margin-bottom:22px">
+      ${[r.path1, r.path2, r.path3].filter(Boolean).map((p,i) => `
+      <div class="card" style="border-left:3px solid ${['var(--sage)','var(--sky)','var(--plum)'][i]}">
+        <div style="font-size:13px;font-weight:600;color:${['var(--sage)','var(--sky)','var(--plum)'][i]};margin-bottom:6px">${p.label}</div>
+        <p style="font-size:13px;color:var(--ink2);margin:0 0 10px;line-height:1.7">${p.desc}</p>
+        ${p.requires ? `<div style="font-size:11px;color:var(--ink4);margin-bottom:3px">Requires: ${p.requires}</div>` : ''}
+        ${p.protects ? `<div style="font-size:11px;color:var(--sage)">Protects: ${p.protects}</div>` : ''}
+      </div>`).join('')}
+    </div>
+
+    <!-- Prizes -->
+    ${S.prizes.length > 0 ? `
+    <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink4);font-weight:600;margin-bottom:10px">Clarity unlocked</div>
+    <div style="display:grid;gap:8px;margin-bottom:24px">
+      ${S.prizes.map(p=>`
+      <div class="prize-in" style="display:flex;align-items:center;gap:10px;background:var(--plum-xl);border:1px solid var(--plum-l);border-radius:11px;padding:11px 15px">
+        <span style="color:var(--plum);flex-shrink:0;font-size:14px">✦</span>
+        <span style="font-size:13px;color:var(--plum)">${p.label}</span>
+      </div>`).join('')}
+    </div>` : ''}
+
+    <!-- Affirmation -->
+    ${r.affirmation ? `
+    <div style="background:var(--sage-xxl);border:1px solid var(--sage-l);border-radius:14px;padding:20px;text-align:center;margin-bottom:32px">
+      <div style="font-size:10px;letter-spacing:0.13em;text-transform:uppercase;color:var(--sage);font-weight:600;margin-bottom:10px">Carry this forward</div>
+      <p style="font-family:'Lora',serif;font-size:19px;font-style:italic;color:var(--ink);margin:0;line-height:1.6">"${r.affirmation}"</p>
+    </div>` : ''}
+
+    <div style="text-align:center">
+      <button id="restart-btn" class="btn-ghost">Start a new session</button>
+    </div>
+  </div>
+</div>`;
+}
+function bResults() {
+  document.getElementById('restart-btn')?.addEventListener('click', () => {
+    Object.assign(S, {
+      screen:'landing', mode:null, yourName:'', theirName:'', situation:'', urgency:false,
+      lane:'origin', msgs:{ origin:[], you:[], them:[], container:[], clarity:[] },
+      originStep:0, originDone:false, score:0, prizes:[], calamityOpen:false,
+      pressureOpen:false, loading:false, report:null,
+      laneUnlocked:{ origin:true, you:false, them:false, container:false, clarity:false },
+    });
+    render();
+  });
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
